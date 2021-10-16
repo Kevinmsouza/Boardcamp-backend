@@ -56,7 +56,6 @@ app.post('/categories', async (req, res) => {
 
 app.get('/games', async (req, res) => {
     const queryString = req.query.name ? req.query.name+"%" : "%";
-    console.log(queryString)
     try {
         const result = await connection.query(`
             SELECT 
@@ -65,8 +64,8 @@ app.get('/games', async (req, res) => {
             FROM games
                 JOIN categories 
                     ON games."categoryId" = categories.id
-            WHERE games.name iLIKE '${queryString}';
-        `)
+            WHERE games.name iLIKE $1;
+        `, [queryString])
         res.send(result.rows)
     } catch (error){
         console.log(error)
@@ -123,6 +122,145 @@ app.post('/games', async (req, res) => {
             [name, image, stockTotal, categoryId, pricePerDay]
         )
         res.sendStatus(201)
+
+    }catch (error){
+        console.log(error)
+        res.sendStatus(500)
+    }
+})
+
+app.get('/customers', async (req, res) => {
+    const queryString = req.query.cpf ? req.query.cpf+"%" : "%";
+    try {
+        const result = await connection.query(`
+            SELECT customers.*
+            FROM customers
+            WHERE customers.cpf iLIKE $1;
+        `, [queryString])
+        res.send(result.rows)
+    } catch (error){
+        console.log(error)
+        res.sendStatus(500)
+    }
+})
+
+app.get('/customers/:id', async (req, res) => {
+    const { id } = req.params
+    if(joi.number().integer().greater(0).required().validate(id).error){
+        res.sendStatus(400)
+    }
+    try {
+        const result = await connection.query(`
+            SELECT customers.*
+            FROM customers
+            WHERE customers.id = $1;
+        `, [id])
+        if(result.rows.length){
+            return res.send(result.rows)
+        }
+        res.sendStatus(404)
+    } catch (error){
+        console.log(error)
+        res.sendStatus(500)
+    }
+})
+
+app.post('/customers', async (req, res) => {
+    const customerSchema = joi.object({
+        name: joi.string()
+            .required(),
+        phone: joi.string()
+            .pattern(/^[0-9]{10,11}$/)
+            .required(),
+        cpf: joi.string()
+            .pattern(/^[0-9]{11}$/)
+            .required(),
+        birthday: joi.date()
+            .less('now')
+            .required()
+    })
+    const hasError = customerSchema.validate(req.body).error
+    if(hasError){
+        return res.sendStatus(400)
+    }
+
+    const {
+        name,
+        phone,
+        cpf,
+        birthday
+    } = req.body;
+
+    try {
+        const checkCpf= await connection.query('SELECT * FROM customers WHERE cpf = $1', [cpf])
+        if(checkCpf.rows.length){
+            return res.sendStatus(409)
+        }
+        await connection.query(`INSERT INTO customers (
+                name,
+                phone,
+                cpf,
+                birthday
+            ) VALUES ($1, $2, $3, $4);`,
+            [name, phone, cpf, birthday]
+        )
+        res.sendStatus(201)
+
+    }catch (error){
+        console.log(error)
+        res.sendStatus(500)
+    }
+})
+
+app.put('/customers/:id', async (req, res) => {
+    const { id } = req.params;
+    if(joi.number().integer().greater(0).required().validate(id).error){
+        res.sendStatus(400)
+    }
+    const customerSchema = joi.object({
+        name: joi.string()
+            .required(),
+        phone: joi.string()
+            .pattern(/^[0-9]{10,11}$/)
+            .required(),
+        cpf: joi.string()
+            .pattern(/^[0-9]{11}$/)
+            .required(),
+        birthday: joi.date()
+            .less('now')
+            .required()
+    })
+    const hasError = customerSchema.validate(req.body).error
+    if(hasError){
+        return res.sendStatus(400)
+    }
+
+    const {
+        name,
+        phone,
+        cpf,
+        birthday
+    } = req.body;
+
+    try {
+        const checkId= await connection.query('SELECT * FROM customers WHERE id = $1', [id])
+        if(!checkId.rows.length){
+            return res.sendStatus(404)
+        }
+        const checkCpf= await connection.query('SELECT * FROM customers WHERE id != $1 AND cpf = $2', [id, cpf])
+        if(checkCpf.rows.length){
+            return res.sendStatus(409)
+        }
+        await connection.query(`UPDATE customers 
+            SET 
+            name = $2,
+            phone = $3,
+            cpf = $4,
+            birthday = $5
+        WHERE id = $1;`,
+        [id, name, phone, cpf, birthday]
+    )
+        res.sendStatus(200)
 
     }catch (error){
         console.log(error)
