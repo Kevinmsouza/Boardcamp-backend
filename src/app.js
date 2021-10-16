@@ -32,7 +32,6 @@ app.get('/categories', async (req, res) => {
 app.post('/categories', async (req, res) => {
     const categorySchema = joi.object({
         name: joi.string()
-            .alphanum()
             .max(30)
             .required(),
     })
@@ -47,6 +46,82 @@ app.post('/categories', async (req, res) => {
             return res.sendStatus(409)
         }
         await connection.query('INSERT INTO categories (name) VALUES ($1)', [req.body.name])
+        res.sendStatus(201)
+
+    }catch (error){
+        console.log(error)
+        res.sendStatus(500)
+    }
+})
+
+app.get('/games', async (req, res) => {
+    const queryString = req.query.name ? req.query.name+"%" : "%";
+    console.log(queryString)
+    try {
+        const result = await connection.query(`
+            SELECT 
+                games.*,
+                categories.name AS "categoryName"
+            FROM games
+                JOIN categories 
+                    ON games."categoryId" = categories.id
+            WHERE games.name iLIKE '${queryString}';
+        `)
+        res.send(result.rows)
+    } catch (error){
+        console.log(error)
+        res.sendStatus(500)
+    }
+})
+
+app.post('/games', async (req, res) => {
+    const gameSchema = joi.object({
+        name: joi.string()
+            .max(50)
+            .required(),
+        image: joi.string()
+            .pattern(/(http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png|jpeg)/)
+            .required(),
+        stockTotal: joi.number()
+            .integer()
+            .greater(0)
+            .required(),
+        categoryId: joi.number()
+            .integer()
+            .greater(0)
+            .required(),
+        pricePerDay: joi.number()
+            .integer()
+            .greater(0)
+            .required(),
+    })
+    const hasError = gameSchema.validate(req.body).error
+    if(hasError){
+        return res.sendStatus(400)
+    }
+
+    const {
+        name,
+        image,
+        stockTotal,
+        categoryId,
+        pricePerDay
+    } = req.body;
+
+    try {
+        const checkName= await connection.query('SELECT * FROM games WHERE name = $1', [name])
+        if(checkName.rows.length){
+            return res.sendStatus(409)
+        }
+        await connection.query(`INSERT INTO games (
+                name,
+                image,
+                "stockTotal",
+                "categoryId",
+                "pricePerDay"
+            ) VALUES ($1, $2, $3, $4, $5);`,
+            [name, image, stockTotal, categoryId, pricePerDay]
+        )
         res.sendStatus(201)
 
     }catch (error){
