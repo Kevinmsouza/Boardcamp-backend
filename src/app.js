@@ -23,7 +23,7 @@ app.get('/categories', async (req, res) => {
     try {
         const result = await connection.query('SELECT * FROM categories')
         res.send(result.rows)
-    } catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
@@ -36,26 +36,25 @@ app.post('/categories', async (req, res) => {
             .required(),
     })
     const hasError = categorySchema.validate(req.body).error
-    if(hasError){
+    if (hasError) {
         return res.sendStatus(400)
     }
-
     try {
-        const checkName= await connection.query('SELECT * FROM categories WHERE name = $1', [req.body.name])
-        if(checkName.rows.length){
+        const checkName = await connection.query('SELECT * FROM categories WHERE name = $1', [req.body.name])
+        if (checkName.rows.length) {
             return res.sendStatus(409)
         }
         await connection.query('INSERT INTO categories (name) VALUES ($1)', [req.body.name])
         res.sendStatus(201)
 
-    }catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
 })
 
 app.get('/games', async (req, res) => {
-    const queryString = req.query.name ? req.query.name+"%" : "%";
+    const queryString = req.query.name ? req.query.name + "%" : "%";
     try {
         const result = await connection.query(`
             SELECT 
@@ -67,7 +66,7 @@ app.get('/games', async (req, res) => {
             WHERE games.name iLIKE $1;
         `, [queryString])
         res.send(result.rows)
-    } catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
@@ -95,10 +94,9 @@ app.post('/games', async (req, res) => {
             .required(),
     })
     const hasError = gameSchema.validate(req.body).error
-    if(hasError){
+    if (hasError) {
         return res.sendStatus(400)
     }
-
     const {
         name,
         image,
@@ -106,10 +104,9 @@ app.post('/games', async (req, res) => {
         categoryId,
         pricePerDay
     } = req.body;
-
     try {
-        const checkName= await connection.query('SELECT * FROM games WHERE name = $1', [name])
-        if(checkName.rows.length){
+        const checkName = await connection.query('SELECT * FROM games WHERE name = $1', [name])
+        if (checkName.rows.length) {
             return res.sendStatus(409)
         }
         await connection.query(`INSERT INTO games (
@@ -122,15 +119,14 @@ app.post('/games', async (req, res) => {
             [name, image, stockTotal, categoryId, pricePerDay]
         )
         res.sendStatus(201)
-
-    }catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
 })
 
 app.get('/customers', async (req, res) => {
-    const queryString = req.query.cpf ? req.query.cpf+"%" : "%";
+    const queryString = req.query.cpf ? req.query.cpf + "%" : "%";
     try {
         const result = await connection.query(`
             SELECT customers.*
@@ -138,7 +134,7 @@ app.get('/customers', async (req, res) => {
             WHERE customers.cpf iLIKE $1;
         `, [queryString])
         res.send(result.rows)
-    } catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
@@ -146,7 +142,7 @@ app.get('/customers', async (req, res) => {
 
 app.get('/customers/:id', async (req, res) => {
     const { id } = req.params
-    if(joi.number().integer().greater(0).required().validate(id).error){
+    if (joi.number().integer().greater(0).required().validate(id).error) {
         res.sendStatus(400)
     }
     try {
@@ -155,11 +151,11 @@ app.get('/customers/:id', async (req, res) => {
             FROM customers
             WHERE customers.id = $1;
         `, [id])
-        if(result.rows.length){
+        if (result.rows.length) {
             return res.send(result.rows)
         }
         res.sendStatus(404)
-    } catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
@@ -180,20 +176,18 @@ app.post('/customers', async (req, res) => {
             .required()
     })
     const hasError = customerSchema.validate(req.body).error
-    if(hasError){
+    if (hasError) {
         return res.sendStatus(400)
     }
-
     const {
         name,
         phone,
         cpf,
         birthday
     } = req.body;
-
     try {
-        const checkCpf= await connection.query('SELECT * FROM customers WHERE cpf = $1', [cpf])
-        if(checkCpf.rows.length){
+        const checkCpf = await connection.query('SELECT * FROM customers WHERE cpf = $1', [cpf])
+        if (checkCpf.rows.length) {
             return res.sendStatus(409)
         }
         await connection.query(`INSERT INTO customers (
@@ -206,7 +200,7 @@ app.post('/customers', async (req, res) => {
         )
         res.sendStatus(201)
 
-    }catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
@@ -214,7 +208,7 @@ app.post('/customers', async (req, res) => {
 
 app.put('/customers/:id', async (req, res) => {
     const { id } = req.params;
-    if(joi.number().integer().greater(0).required().validate(id).error){
+    if (joi.number().integer().greater(0).required().validate(id).error) {
         res.sendStatus(400)
     }
     const customerSchema = joi.object({
@@ -231,24 +225,22 @@ app.put('/customers/:id', async (req, res) => {
             .required()
     })
     const hasError = customerSchema.validate(req.body).error
-    if(hasError){
+    if (hasError) {
         return res.sendStatus(400)
     }
-
     const {
         name,
         phone,
         cpf,
         birthday
     } = req.body;
-
     try {
-        const checkId= await connection.query('SELECT * FROM customers WHERE id = $1', [id])
-        if(!checkId.rows.length){
+        const checkId = await connection.query('SELECT * FROM customers WHERE id = $1', [id])
+        if (!checkId.rows.length) {
             return res.sendStatus(404)
         }
-        const checkCpf= await connection.query('SELECT * FROM customers WHERE id != $1 AND cpf = $2', [id, cpf])
-        if(checkCpf.rows.length){
+        const checkCpf = await connection.query('SELECT * FROM customers WHERE id != $1 AND cpf = $2', [id, cpf])
+        if (checkCpf.rows.length) {
             return res.sendStatus(409)
         }
         await connection.query(`UPDATE customers 
@@ -258,11 +250,11 @@ app.put('/customers/:id', async (req, res) => {
             cpf = $4,
             birthday = $5
         WHERE id = $1;`,
-        [id, name, phone, cpf, birthday]
-    )
+            [id, name, phone, cpf, birthday]
+        )
         res.sendStatus(200)
 
-    }catch (error){
+    } catch (error) {
         console.log(error)
         res.sendStatus(500)
     }
