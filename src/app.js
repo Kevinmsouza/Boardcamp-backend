@@ -2,6 +2,7 @@ import express from 'express'
 import pg from 'pg'
 import cors from 'cors'
 import joi from 'joi'
+import dayjs from 'dayjs'
 
 const app = express();
 app.use(express.json())
@@ -21,7 +22,7 @@ app.get('/check_status', (req, res) => {
 
 app.get('/categories', async (req, res) => {
     try {
-        const result = await connection.query('SELECT * FROM categories')
+        const result = await connection.query('SELECT * FROM categories ORDER BY id ASC;')
         res.send(result.rows)
     } catch (error) {
         console.log(error)
@@ -131,9 +132,15 @@ app.get('/customers', async (req, res) => {
         const result = await connection.query(`
             SELECT customers.*
             FROM customers
-            WHERE customers.cpf iLIKE $1;
+            WHERE customers.cpf iLIKE $1
+            ORDER BY customers.id ASC;
         `, [queryString])
-        res.send(result.rows)
+        res.send(result.rows.map(customer => {
+            return {
+                ...customer,
+                birthday: dayjs(customer.birthday).format('YYYY-MM-DD')
+            }
+        }))
     } catch (error) {
         console.log(error)
         res.sendStatus(500)
@@ -152,7 +159,10 @@ app.get('/customers/:id', async (req, res) => {
             WHERE customers.id = $1;
         `, [id])
         if (result.rows.length) {
-            return res.send(result.rows)
+            return res.send({
+                ...result.rows[0],
+                birthday: dayjs(result.rows[0].birthday).format('YYYY-MM-DD')
+            })
         }
         res.sendStatus(404)
     } catch (error) {
